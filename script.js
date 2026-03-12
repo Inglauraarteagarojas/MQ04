@@ -16,7 +16,7 @@ const ctx = document.getElementById("graficoPPM").getContext("2d");
 const grafico = new Chart(ctx, {
   type: "line",
   data: {
-    labels,
+    labels: labels,
     datasets: [{
       label: "PPM estimado",
       data: datosPPM,
@@ -28,10 +28,25 @@ const grafico = new Chart(ctx, {
   options: {
     responsive: true,
     animation: false,
+    plugins: {
+      legend: {
+        display: true
+      }
+    },
     scales: {
       y: {
         min: 200,
-        max: 10000
+        max: 10000,
+        title: {
+          display: true,
+          text: "PPM"
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: "Hora"
+        }
       }
     }
   }
@@ -45,6 +60,11 @@ async function actualizarDatos() {
     if (!data) {
       ppmTexto.textContent = "Sin datos";
       estadoTexto.textContent = "Firebase vacío";
+      adcTexto.textContent = "ADC crudo: --";
+      mvTexto.textContent = "Voltaje: -- mV";
+      escalaTexto.textContent = "Escala ADC: -- %";
+      ipTexto.textContent = "IP del ESP32: --";
+      relleno.style.width = "0%";
       return;
     }
 
@@ -69,7 +89,12 @@ async function actualizarDatos() {
   } catch (error) {
     ppmTexto.textContent = "Sin conexión";
     estadoTexto.textContent = "No se pudo leer Firebase";
-    console.error(error);
+    adcTexto.textContent = "ADC crudo: --";
+    mvTexto.textContent = "Voltaje: -- mV";
+    escalaTexto.textContent = "Escala ADC: -- %";
+    ipTexto.textContent = "IP del ESP32: --";
+    relleno.style.width = "0%";
+    console.error("Error leyendo Firebase:", error);
   }
 }
 
