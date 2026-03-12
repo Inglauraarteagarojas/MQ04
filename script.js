@@ -1,4 +1,4 @@
-const ESP32_URL = "http://172.20.10.2/data";
+const FIREBASE_URL = "https://esp32mq04-default-rtdb.firebaseio.com/mq4.json";
 
 const ppmTexto = document.getElementById("ppm");
 const estadoTexto = document.getElementById("estado");
@@ -16,7 +16,7 @@ const ctx = document.getElementById("graficoPPM").getContext("2d");
 const grafico = new Chart(ctx, {
   type: "line",
   data: {
-    labels: labels,
+    labels,
     datasets: [{
       label: "PPM estimado",
       data: datosPPM,
@@ -39,8 +39,14 @@ const grafico = new Chart(ctx, {
 
 async function actualizarDatos() {
   try {
-    const respuesta = await fetch(ESP32_URL);
+    const respuesta = await fetch(FIREBASE_URL);
     const data = await respuesta.json();
+
+    if (!data) {
+      ppmTexto.textContent = "Sin datos";
+      estadoTexto.textContent = "Firebase vacío";
+      return;
+    }
 
     ppmTexto.textContent = `${data.ppm} ppm`;
     estadoTexto.textContent = `Nivel: ${data.estado}`;
@@ -62,10 +68,10 @@ async function actualizarDatos() {
     grafico.update();
   } catch (error) {
     ppmTexto.textContent = "Sin conexión";
-    estadoTexto.textContent = "No se pudo leer el ESP32";
+    estadoTexto.textContent = "No se pudo leer Firebase";
     console.error(error);
   }
 }
 
-setInterval(actualizarDatos, 2000);
+setInterval(actualizarDatos, 3000);
 actualizarDatos();
