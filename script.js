@@ -1,4 +1,4 @@
-const FIREBASE_URL = "https://esp32mq04-default-rtdb.firebaseio.com/mq4.json";
+const FIREBASE_ACTUAL_URL = "https://esp32mq04-default-rtdb.firebaseio.com/historial.json";
 
 const ppmTexto = document.getElementById("ppm");
 const estadoTexto = document.getElementById("estado");
@@ -11,8 +11,6 @@ const btnDescargarCSV = document.getElementById("btnDescargarCSV");
 
 const labels = [];
 const datosPPM = [];
-
-let ultimoDatoFirebase = null;
 
 const ctx = document.getElementById("graficoPPM").getContext("2d");
 
@@ -31,11 +29,6 @@ const grafico = new Chart(ctx, {
   options: {
     responsive: true,
     animation: false,
-    plugins: {
-      legend: {
-        display: true
-      }
-    },
     scales: {
       y: {
         min: 200,
@@ -48,19 +41,29 @@ const grafico = new Chart(ctx, {
       x: {
         title: {
           display: true,
-          text: "Hora"
+          text: "Muestras"
         }
       }
     }
   }
 });
 
+function ordenarRegistros(data) {
+  if (!data || typeof data !== "object") return [];
+  return Object.entries(data).map(([id, valor]) => ({
+    id,
+    ...valor
+  })).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+}
+
 async function actualizarDatos() {
   try {
-    const respuesta = await fetch(FIREBASE_URL);
+    const respuesta = await fetch(FIREBASE_ACTUAL_URL, { cache: "no-store" });
     const data = await respuesta.json();
 
-    if (!data) {
+    const registros = ordenarRegistros(data);
+
+    if (!registros.length) {
       ppmTexto.textContent = "Sin datos";
       estadoTexto.textContent = "Firebase vacío";
       adcTexto.textContent = "ADC crudo: --";
@@ -71,104 +74,82 @@ async function actualizarDatos() {
       return;
     }
 
-    ultimoDatoFirebase = data;
+    const ultimo = registros[registros.length - 1];
 
-    ppmTexto.textContent = `${data.ppm} ppm`;
-    estadoTexto.textContent = `Nivel: ${data.estado}`;
-    adcTexto.textContent = `ADC crudo: ${data.adc}`;
-    mvTexto.textContent = `Voltaje: ${data.mv} mV`;
-    escalaTexto.textContent = `Escala ADC: ${data.escala} %`;
-    ipTexto.textContent = `IP del ESP32: ${data.ip}`;
-    relleno.style.width = `${data.escala}%`;
+    ppmTexto.textContent = `${ultimo.ppm} ppm`;
+    estadoTexto.textContent = `Nivel: ${ultimo.estado}`;
+    adcTexto.textContent = `ADC crudo: ${ultimo.adc}`;
+    mvTexto.textContent = `Voltaje: ${ultimo.mv} mV`;
+    escalaTexto.textContent = `Escala ADC: ${ultimo.escala} %`;
+    ipTexto.textContent = `IP del ESP32: ${ultimo.ip}`;
+    relleno.style.width = `${ultimo.escala}%`;
 
-    const hora = new Date().toLocaleTimeString();
-    labels.push(hora);
-    datosPPM.push(data.ppm);
+    labels.length = 0;
+    datosPPM.length = 0;
 
-    if (labels.length > 20) {
-      labels.shift();
-      datosPPM.shift();
-    }
+    const ultimos20 = registros.slice(-20);
+    ultimos20.forEach((item, index) => {
+      labels.push(`M${index + 1}`);
+      datosPPM.push(item.ppm);
+    });
 
     grafico.update();
   } catch (error) {
     ppmTexto.textContent = "Sin conexión";
     estadoTexto.textContent = "No se pudo leer Firebase";
-    adcTexto.textContent = "ADC crudo: --";
-    mvTexto.textContent = "Voltaje: -- mV";
-    escalaTexto.textContent = "Escala ADC: -- %";
-    ipTexto.textContent = "IP del ESP32: --";
-    relleno.style.width = "0%";
     console.error("Error leyendo Firebase:", error);
   }
 }
 
-function convertirA_CSV(datos) {
-  const encabezados = ["adc", "escala", "estado", "ip", "mv", "ppm"];
-  const filas = [encabezados.join(",")];
+function convertirA_CSV(registros) {
+  const encabezados = ["id", "adc", "mv", "escala", "ppm", "estado", "ip", "timestamp"];
+  let csv = encabezados.join(",") + "\n";
 
-  for (const fila of datos) {
-    const valores = encabezados.map(campo => {
-      const valor = fila[campo] ?? "";
+  registros.forEach(registro => {
+    const fila = encabezados.map(campo => {
+      const valor = registro[campo] ?? "";
       return `"${String(valor).replace(/"/g, '""')}"`;
     });
-    filas.push(valores.join(","));
-  }
+    csv += fila.join(",") + "\n";
+  });
 
-  return filas.join("\n");
+  return csv;
 }
 
-function descargarArchivoCSV(nombreArchivo, contenidoCSV) {
-  const blob = new Blob([contenidoCSV], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
+function descargarTextoComoArchivo(nombreArchivo, contenido) {
+  const blob = new Blob([contenido], { type: "text/csv;charset=utf-8;" });
   const enlace = document.createElement("a");
+  const url = window.URL.createObjectURL(blob);
+
   enlace.href = url;
   enlace.download = nombreArchivo;
   document.body.appendChild(enlace);
   enlace.click();
   document.body.removeChild(enlace);
 
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 async function descargarCSVDesdeFirebase() {
   try {
-    const respuesta = await fetch(FIREBASE_URL);
+    const respuesta = await fetch(FIREBASE_ACTUAL_URL, { cache: "no-store" });
     const data = await respuesta.json();
 
-    if (!data) {
-      alert("No hay datos en Firebase para exportar.");
-      return;
-    }
+    const registros = ordenarRegistros(data);
 
-    let registros = [];
-
-    // Si Firebase devuelve un solo objeto
-    if (!Array.isArray(data) && typeof data === "object" && data.adc !== undefined) {
-      registros = [data];
-    } 
-    // Si en el futuro guardas múltiples registros como objetos hijos
-    else if (!Array.isArray(data) && typeof data === "object") {
-      registros = Object.values(data);
-    } 
-    // Si alguna vez guardas arreglo
-    else if (Array.isArray(data)) {
-      registros = data.filter(item => item);
-    }
-
-    if (registros.length === 0) {
-      alert("No se encontraron registros para exportar.");
+    if (!registros.length) {
+      alert("No hay historial para exportar.");
       return;
     }
 
     const csv = convertirA_CSV(registros);
     const fecha = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    descargarArchivoCSV(`mq4_datos_${fecha}.csv`, csv);
-
+    descargarTextoComoArchivo(`historial_mq4_${fecha}.csv`, csv);
   } catch (error) {
-    console.error("Error exportando CSV:", error);
-    alert("No se pudo descargar el CSV.");
+    console.error("Error descargando CSV:", error);
+    alert("No se pudo descargar el historial CSV.");
   }
 }
 
