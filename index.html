@@ -3,80 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitor MQ-4</title>
+  <title>Monitor MQ-4 ESP32</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body{
+    body {
       font-family: Arial, sans-serif;
-      background:#f4f7fb;
-      margin:0;
-      padding:20px;
-      color:#1d2a3a;
+      background: linear-gradient(135deg, #eaf2ff, #f7fbff);
+      margin: 0;
+      padding: 20px;
+      color: #1d2a3a;
     }
-    .card{
-      max-width:900px;
-      margin:auto;
-      background:white;
-      border-radius:18px;
-      padding:24px;
-      box-shadow:0 8px 30px rgba(0,0,0,0.10);
+
+    .card {
+      max-width: 950px;
+      margin: auto;
+      background: white;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10);
     }
-    h1{text-align:center;}
-    .ppm{
-      font-size:2.2rem;
-      font-weight:bold;
-      text-align:center;
-      margin:18px 0 8px 0;
+
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 20px;
     }
-    .estado{
-      text-align:center;
-      font-size:1.2rem;
-      font-weight:bold;
-      margin-bottom:20px;
+
+    .ppm {
+      font-size: 2.4rem;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
     }
-    .grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:14px;
-      margin-top:20px;
+
+    .estado {
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 20px;
     }
-    .dato{
-      font-size:1.05rem;
-      padding:14px;
-      background:#eef4ff;
-      border-radius:12px;
+
+    .barra-box {
+      margin: 20px 0;
     }
-    .barra-box{
-      margin:20px 0;
+
+    .barra-titulo {
+      font-weight: bold;
+      margin-bottom: 8px;
     }
-    .barra{
-      width:100%;
-      height:24px;
-      background:#dde7f5;
-      border-radius:999px;
-      overflow:hidden;
+
+    .barra {
+      width: 100%;
+      height: 26px;
+      background: #dde7f5;
+      border-radius: 999px;
+      overflow: hidden;
     }
-    .relleno{
-      height:100%;
-      width:0%;
-      background:linear-gradient(90deg,#4caf50,#ffb300,#e53935);
-      transition:width 0.6s ease;
+
+    .relleno {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4caf50, #ffb300, #e53935);
+      transition: width 0.6s ease;
     }
-    canvas{
-      margin-top:25px;
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 20px;
     }
-    @media (max-width:700px){
-      .grid{grid-template-columns:1fr;}
+
+    .dato {
+      font-size: 1.05rem;
+      padding: 14px;
+      background: #eef4ff;
+      border-radius: 12px;
+    }
+
+    .grafico-box {
+      margin-top: 30px;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 700px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ppm {
+        font-size: 2rem;
+      }
     }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Monitor de Metano MQ-4</h1>
+
     <div class="ppm" id="ppm">Cargando...</div>
     <div class="estado" id="estado">Cargando...</div>
 
     <div class="barra-box">
+      <div class="barra-titulo">Nivel estimado del sensor</div>
       <div class="barra">
         <div class="relleno" id="relleno"></div>
       </div>
@@ -89,7 +127,13 @@
       <div class="dato" id="ip">IP del ESP32: --</div>
     </div>
 
-    <canvas id="graficoPPM"></canvas>
+    <div class="grafico-box">
+      <canvas id="graficoPPM"></canvas>
+    </div>
+
+    <div class="footer">
+      Datos leídos desde Firebase Realtime Database
+    </div>
   </div>
 
   <script src="script.js"></script>
